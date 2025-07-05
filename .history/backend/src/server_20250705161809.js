@@ -1,3 +1,4 @@
+// backend/src/server.js
 import express from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
@@ -12,7 +13,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // ✅ Frontend domain
+    origin: process.env.FRONTEND_URL, // ✅ use deployed frontend
     credentials: true,
   })
 );
@@ -25,12 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// ✅ Health check route
-app.get("/", (req, res) => {
-  res.send("NearU backend is live!");
-});
-
 // Connect DB
 connectDB();
 
-export default app;
+export default app; // ✅ no app.listen() on Vercel
