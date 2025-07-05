@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",  
   "scripts": {
-    "dev": "nodemon index.js",       
-    "start": "node index.js"         
+    "dev": "nodemon index.js",       // ← ✅ point to index.js
+    "start": "node index.js"         // ← ✅ use index.js for local prod start
   },
   "keywords": [],
   "author": "",
