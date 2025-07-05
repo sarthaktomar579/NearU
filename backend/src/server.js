@@ -10,13 +10,25 @@ import { connectDB } from "./lib/db.js";
 
 const app = express();
 
+// ✅ More flexible CORS setup
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // main production frontend
+  "http://localhost:5173"   // local development
+];
+
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, "http://localhost:5173"],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (e.g. mobile apps, curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
-
 
 app.use(express.json());
 app.use(cookieParser());
@@ -26,12 +38,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// ✅ Health check route
+// ✅ Health check
 app.get("/", (req, res) => {
   res.send("NearU backend is live!");
 });
 
-// Connect DB
+// Connect to DB
 connectDB();
 
 export default app;
