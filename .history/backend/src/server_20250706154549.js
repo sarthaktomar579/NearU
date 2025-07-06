@@ -33,6 +33,9 @@ app.use("/api/chat", chatRoutes);
 app.get("/", (req, res) => {
   res.send("API is live on Vercel 🎉");
 });
+git add .
+git commit -m "Add default / route to fix Vercel Not Found"
+git push origin main
 
 
 // Optional: Serve frontend build if deployed together
