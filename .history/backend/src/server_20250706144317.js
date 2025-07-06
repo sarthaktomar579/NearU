@@ -17,8 +17,7 @@ const __dirname = path.resolve();
 
 app.use(
   cors({
-    origin: [""],
-    methods: ["POST", "GET", "PUT"],
+    origin: "http://localhost:5173",
     credentials: true, // allow frontend to send cookies
   })
 );
