@@ -10,18 +10,18 @@ import { connectDB } from "./lib/db.js";
 
 const app = express();
 
-const vercelBase = ".vercel.app";
+// ✅ More flexible CORS setup
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // main production frontend
+  "http://localhost:5173"   // local development
+];
 
-// ✅ CORS middleware
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (
-        !origin || // allow mobile apps or tools like curl
-        origin === process.env.FRONTEND_URL || // exact match (main prod)
-        origin === "http://localhost:5173" || // dev
-        origin.endsWith(vercelBase) // wildcard for Vercel preview domains
-      ) {
+      // Allow requests with no origin (e.g. mobile apps, curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error("Not allowed by CORS"));
@@ -38,12 +38,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/chat", chatRoutes);
 
-// Health check
+// ✅ Health check
 app.get("/", (req, res) => {
   res.send("NearU backend is live!");
 });
 
-// DB connection
+// Connect to DB
 connectDB();
 
 export default app;
