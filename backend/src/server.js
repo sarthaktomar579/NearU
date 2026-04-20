@@ -55,6 +55,22 @@ app.get("/", (req, res) => {
   res.send("API is live on Vercel 🎉");
 });
 
+app.get("/api/migrate-avatars", async (req, res) => {
+  try {
+    const User = (await import("./models/User.js")).default;
+    const users = await User.find({ profilePic: { $regex: "avatar.iran.liara.run" } });
+    let count = 0;
+    for (const user of users) {
+      user.profilePic = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`;
+      await user.save({ validateBeforeSave: false });
+      count++;
+    }
+    res.json({ success: true, message: `Updated ${count} user(s) avatars` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 // Optional: Serve frontend build if deployed together
 if (process.env.NODE_ENV === "production") {
