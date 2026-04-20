@@ -10,7 +10,6 @@ import chatRoutes from "./routes/chat.route.js";
 import { connectDB } from "./lib/db.js";
 
 const app = express();
-connectDB(); // Move DB connection to global context
 
 const __dirname = path.resolve();
 
@@ -33,6 +32,16 @@ app.use((req, res, next) => {
     return res.status(204).end();
   }
   next();
+});
+
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("DB connection failed:", error.message);
+    res.status(503).json({ message: "Database connection failed" });
+  }
 });
 
 app.use(express.json());
