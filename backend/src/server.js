@@ -15,16 +15,28 @@ connectDB(); // Move DB connection to global context
 
 const __dirname = path.resolve();
 
+const allowedOrigins = [
+  "https://near-u-frontend.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174",
+];
+
 app.use(
   cors({
-    origin: process.env.NODE_ENV === "production" ? "https://near-u-frontend.vercel.app" : ["http://localhost:5173", "http://localhost:5174"],
-    methods: ["GET", "POST", "PUT", "OPTIONS"],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
-
+app.options("*", cors());
 
 app.use(express.json());
 app.use(cookieParser());

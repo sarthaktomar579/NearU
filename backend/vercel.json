@@ -5,6 +5,18 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "methods": ["OPTIONS"],
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "https://near-u-frontend.vercel.app" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization" },
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
+      ],
+      "dest": "src/vercel-server.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "src/vercel-server.js"
     }
