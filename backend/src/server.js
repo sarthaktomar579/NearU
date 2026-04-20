@@ -58,11 +58,19 @@ app.get("/", (req, res) => {
 app.get("/api/migrate-avatars", async (req, res) => {
   try {
     const User = (await import("./models/User.js")).default;
-    const users = await User.find({ profilePic: { $regex: "avatar.iran.liara.run" } });
+    const users = await User.find({
+      $or: [
+        { profilePic: { $regex: "avatar.iran.liara.run" } },
+        { profilePic: "" },
+        { profilePic: { $exists: false } },
+      ],
+    });
     let count = 0;
     for (const user of users) {
-      user.profilePic = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`;
-      await user.save({ validateBeforeSave: false });
+      await User.updateOne(
+        { _id: user._id },
+        { profilePic: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email)}` }
+      );
       count++;
     }
     res.json({ success: true, message: `Updated ${count} user(s) avatars` });
