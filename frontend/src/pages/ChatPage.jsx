@@ -45,7 +45,15 @@ const ChatPage = () => {
         return;
       }
 
-      if (!tokenData?.token || !authUser) return;
+      if (!authUser) return;
+
+      if (tokenData && !tokenData.token) {
+        setError("Backend failed to generate chat token. Check backend Stream API keys.");
+        setLoading(false);
+        return;
+      }
+
+      if (!tokenData) return; // Still loading tokenData
 
       try {
         console.log("Initializing stream chat client...");
