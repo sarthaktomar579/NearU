@@ -27,10 +27,11 @@ const ChatPage = () => {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const { authUser } = useAuthUser();
 
-  const { data: tokenData } = useQuery({
+  const { data: tokenData, isError: isTokenError } = useQuery({
     queryKey: ["streamToken"],
     queryFn: getStreamToken,
     enabled: !!authUser, // this will run only when authUser is available
@@ -38,10 +39,20 @@ const ChatPage = () => {
 
   useEffect(() => {
     const initChat = async () => {
+      if (isTokenError) {
+        setError("Failed to get chat token from backend.");
+        setLoading(false);
+        return;
+      }
+
       if (!tokenData?.token || !authUser) return;
 
       try {
         console.log("Initializing stream chat client...");
+
+        if (!STREAM_API_KEY) {
+          throw new Error("Stream API key is missing (VITE_STREAM_API_KEY).");
+        }
 
         const client = StreamChat.getInstance(STREAM_API_KEY);
 
@@ -69,8 +80,10 @@ const ChatPage = () => {
 
         setChatClient(client);
         setChannel(currChannel);
+        setError(null);
       } catch (error) {
         console.error("Error initializing chat:", error);
+        setError(error.message || "Could not connect to chat. Please try again.");
         toast.error("Could not connect to chat. Please try again.");
       } finally {
         setLoading(false);
@@ -78,7 +91,7 @@ const ChatPage = () => {
     };
 
     initChat();
-  }, [tokenData, authUser, targetUserId]);
+  }, [tokenData, isTokenError, authUser, targetUserId]);
 
   const handleVideoCall = () => {
     if (channel) {
@@ -92,7 +105,23 @@ const ChatPage = () => {
     }
   };
 
-  if (loading || !chatClient || !channel) return <ChatLoader />;
+  if (loading) return <ChatLoader />;
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[93vh]">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="btn btn-primary"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!chatClient || !channel) return <ChatLoader />;
 
   return (
     <div className="h-[93vh]">
