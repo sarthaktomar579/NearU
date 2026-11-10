@@ -40,6 +40,7 @@ const userSchema = new mongoose.Schema(
     isOnboarded: {
       type: Boolean,
       default: false,
+      index: true,
     },
     friends: [
       {
@@ -48,8 +49,22 @@ const userSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      transform: function (doc, ret) {
+        delete ret.password;
+        return ret;
+      },
+    },
+  }
 );
+
+// High-performance compound indexes for scale (100k+ users)
+userSchema.index({ isOnboarded: 1, createdAt: -1 });
+userSchema.index({ nativeLanguage: 1, learningLanguage: 1 });
+userSchema.index({ location: 1 });
+
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();

@@ -1,6 +1,8 @@
 import express from "express";
 import "dotenv/config";
 import cookieParser from "cookie-parser";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
 import path from "path";
 
 import authRoutes from "./routes/auth.route.js";
@@ -12,6 +14,15 @@ import { connectDB } from "./lib/db.js";
 const app = express();
 
 const __dirname = path.resolve();
+
+// High performance response compression (Gzip/Brotli)
+// Reduces response payload sizes by up to 80% for large user lists
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024, // Only compress responses > 1KB
+  })
+);
 
 const allowedOrigins = [
   "https://near-u-frontend.vercel.app",
@@ -34,18 +45,43 @@ app.use((req, res, next) => {
   next();
 });
 
+// Protect database from connection thrashing with pooled connection handler
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (error) {
-    console.error("DB connection failed:", error.message);
+    console.error("❌ DB connection failed:", error.message);
     res.status(503).json({ message: "Database connection failed" });
   }
 });
 
-app.use(express.json());
+// Parse request bodies with reasonable size limits to prevent payload memory exhaustion
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
+
+// Rate Limiting for high scale protection
+// 1. Strict rate limiter for auth (brute force protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 attempts per 15 min per IP
+  message: { message: "Too many authentication attempts, please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 2. General API rate limiter for standard routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 600, // 600 requests per 15 min per IP
+  message: { message: "Too many requests, please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/signup", authLimiter);
+app.use("/api", apiLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -64,21 +100,31 @@ app.get("/api/migrate-avatars", async (req, res) => {
         { profilePic: "" },
         { profilePic: { $exists: false } },
       ],
-    });
+    })
+      .select("_id email")
+      .limit(500)
+      .lean();
+
     let count = 0;
-    for (const user of users) {
-      await User.updateOne(
-        { _id: user._id },
-        { profilePic: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email)}` }
-      );
-      count++;
+    const bulkOps = users.map((user) => ({
+      updateOne: {
+        filter: { _id: user._id },
+        update: {
+          profilePic: `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email)}`,
+        },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      const result = await User.bulkWrite(bulkOps);
+      count = result.modifiedCount;
     }
+
     res.json({ success: true, message: `Updated ${count} user(s) avatars` });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
-
 
 // Optional: Serve frontend build if deployed together
 if (process.env.NODE_ENV === "production") {
@@ -89,7 +135,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-// ✅ Instead of app.listen, just export app
+// Instead of app.listen, just export app for serverless / start in dev
 if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 5001;
   app.listen(PORT, () => {

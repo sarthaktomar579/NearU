@@ -1,26 +1,41 @@
 import mongoose from "mongoose";
 
-let cached = global._mongooseConnection;
+// Connection cache across hot-reloads / serverless invocations
+let cached = global._mongoose;
+
+if (!cached) {
+  cached = global._mongoose = { conn: null, promise: null };
+}
 
 export const connectDB = async () => {
-  if (cached && cached.readyState === 1) {
-    return cached;
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
   }
 
-  if (mongoose.connection.readyState === 1) {
-    cached = mongoose.connection;
-    global._mongooseConnection = cached;
-    return cached;
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE || "50", 10), // Maintain up to 50 active socket connections
+      minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE || "10", 10), // Keep 10 idle sockets ready for instant response
+      serverSelectionTimeoutMS: 5000, // Fail fast if MongoDB cluster is unreachable
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+      family: 4, // Force IPv4 to avoid slow IPv6 DNS lookups
+    };
+
+    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((m) => {
+      console.log(`✅ MongoDB Connected [Pool: ${opts.minPoolSize}-${opts.maxPoolSize}]: ${m.connection.host}`);
+      return m;
+    });
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    cached = conn.connection;
-    global._mongooseConnection = cached;
-    return conn;
+    cached.conn = await cached.promise;
+    return cached.conn;
   } catch (error) {
-    console.error("Error in connecting to MongoDB", error);
+    cached.promise = null; // Reset promise so subsequent requests can retry
+    console.error("❌ Error connecting to MongoDB:", error.message);
     throw error;
   }
 };
+
+export default connectDB;

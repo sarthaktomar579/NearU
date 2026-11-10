@@ -1,14 +1,24 @@
 import { upsertStreamUser } from "../lib/stream.js";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import { invalidateUserCache } from "../middleware/auth.middleware.js";
 
-// ✅ Util to send JWT cookie
+// Helper to sanitize user object and ensure password is removed
+function sanitizeUser(user) {
+  if (!user) return null;
+  const userObj = typeof user.toObject === "function" ? user.toObject() : { ...user };
+  delete userObj.password;
+  userObj.id = userObj._id.toString();
+  return userObj;
+}
+
+// Util to send JWT cookie
 function sendToken(res, token) {
   res.cookie("jwt", token, {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     httpOnly: true,
-    sameSite: "None", // ✅ required for cross-origin cookies
-    secure: true,     // ✅ required when using SameSite=None
+    sameSite: "None", // required for cross-origin cookies
+    secure: true,     // required when using SameSite=None
   });
 }
 
@@ -29,16 +39,17 @@ export async function signup(req, res) {
       return res.status(400).json({ message: "Invalid email format" });
     }
 
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail }).select("_id").lean();
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists, please use a different one" });
     }
 
-    const randomAvatar = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(email)}`;
+    const randomAvatar = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(normalizedEmail)}`;
 
     const newUser = await User.create({
-      email,
-      fullName,
+      email: normalizedEmail,
+      fullName: fullName.trim(),
       password,
       profilePic: randomAvatar,
     });
@@ -58,8 +69,8 @@ export async function signup(req, res) {
       expiresIn: "7d",
     });
 
-    sendToken(res, token); // ✅ send cookie
-    res.status(201).json({ success: true, user: newUser });
+    sendToken(res, token);
+    res.status(201).json({ success: true, user: sanitizeUser(newUser) });
   } catch (error) {
     console.error("❌ Error in signup controller:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
@@ -74,7 +85,8 @@ export async function login(req, res) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const user = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -83,8 +95,8 @@ export async function login(req, res) {
       expiresIn: "7d",
     });
 
-    sendToken(res, token); // ✅ send cookie
-    res.status(200).json({ success: true, user });
+    sendToken(res, token);
+    res.status(200).json({ success: true, user: sanitizeUser(user) });
   } catch (error) {
     console.error("❌ Error in login controller:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
@@ -92,16 +104,19 @@ export async function login(req, res) {
 }
 
 export function logout(req, res) {
+  if (req.user && req.user._id) {
+    invalidateUserCache(req.user._id);
+  }
   res.clearCookie("jwt", {
-    sameSite: "None", // ✅ required for cross-origin cookie removal
-    secure: true,     // ✅ match production cookie config
+    sameSite: "None",
+    secure: true,
   });
   res.status(200).json({ success: true, message: "Logout successful" });
 }
 
 export async function onboard(req, res) {
   try {
-    const userId = req.user._id;
+    const userId = req.user._id || req.user.id;
     const { fullName, bio, nativeLanguage, learningLanguage, location } = req.body;
 
     if (!fullName || !bio || !nativeLanguage || !learningLanguage || !location) {
@@ -120,13 +135,20 @@ export async function onboard(req, res) {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
-        ...req.body,
+        fullName: fullName.trim(),
+        bio: bio.trim(),
+        nativeLanguage: nativeLanguage.trim(),
+        learningLanguage: learningLanguage.trim(),
+        location: location.trim(),
         isOnboarded: true,
       },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    // Invalidate session cache
+    invalidateUserCache(userId);
 
     try {
       await upsertStreamUser({
@@ -139,7 +161,7 @@ export async function onboard(req, res) {
       console.log("⚠️ Error updating Stream user:", streamError.message);
     }
 
-    res.status(200).json({ success: true, user: updatedUser });
+    res.status(200).json({ success: true, user: sanitizeUser(updatedUser) });
   } catch (error) {
     console.error("❌ Onboarding error:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
