@@ -15,12 +15,14 @@ import {
   SearchIcon,
   UserPlusIcon,
   UsersIcon,
+  LightbulbIcon,
 } from "lucide-react";
 
 import { capitialize } from "../lib/utils";
 
 import FriendCard, { getLanguageFlag } from "../components/FriendCard";
 import NoFriendsFound from "../components/NoFriendsFound";
+import DailyImmersionCard from "../components/DailyImmersionCard";
 
 const HomePage = () => {
   const queryClient = useQueryClient();
@@ -81,175 +83,202 @@ const HomePage = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="container mx-auto space-y-10">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Your Friends</h2>
-          <Link to="/notifications" className="btn btn-outline btn-sm">
-            <UsersIcon className="mr-2 size-4" />
-            Friend Requests
-          </Link>
-        </div>
-
-        {loadingFriends ? (
-          <div className="flex justify-center py-12">
-            <span className="loading loading-spinner loading-lg" />
-          </div>
-        ) : friends.length === 0 ? (
-          <NoFriendsFound />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {friends.map((friend) => (
-              <FriendCard key={friend._id} friend={friend} />
-            ))}
-          </div>
-        )}
-
-        <section>
-          <div className="mb-6 sm:mb-8 space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Meet New Learners</h2>
-                <p className="opacity-70">
-                  Discover perfect language exchange partners based on your profile
-                </p>
+      <div className="container mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* MAIN CONTENT AREA */}
+          <div className="lg:col-span-8 xl:col-span-8 space-y-10">
+            {/* FRIENDS SECTION */}
+            <div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Your Friends</h2>
+                <Link to="/notifications" className="btn btn-outline btn-sm">
+                  <UsersIcon className="mr-2 size-4" />
+                  Friend Requests
+                </Link>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-72">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 opacity-50" />
-                <input
-                  type="text"
-                  placeholder="Search by name, language, city..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="input input-sm input-bordered w-full pl-9"
-                />
+              {loadingFriends ? (
+                <div className="flex justify-center py-12">
+                  <span className="loading loading-spinner loading-lg" />
+                </div>
+              ) : friends.length === 0 ? (
+                <NoFriendsFound />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {friends.map((friend) => (
+                    <FriendCard key={friend._id} friend={friend} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* MEET NEW LEARNERS SECTION */}
+            <section>
+              <div className="mb-6 sm:mb-8 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Meet New Learners</h2>
+                    <p className="opacity-70 text-sm">
+                      Discover language exchange partners based on your profile
+                    </p>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative w-full sm:w-72">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 opacity-50" />
+                    <input
+                      type="text"
+                      placeholder="Search by name, language, city..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="input input-sm input-bordered w-full pl-9"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {loadingUsers ? (
-            <div className="flex justify-center py-12">
-              <span className="loading loading-spinner loading-lg" />
-            </div>
-          ) : recommendedUsers.length === 0 ? (
-            <div className="card bg-base-200 p-6 text-center">
-              <h3 className="font-semibold text-lg mb-2">No recommendations available</h3>
-              <p className="text-base-content opacity-70">
-                {debouncedSearch
-                  ? "No learners match your search criteria. Try a different query!"
-                  : "Check back later for new language partners!"}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recommendedUsers.map((user) => {
-                  const hasRequestBeenSent = outgoingRequestsIds.has(user._id);
+              {loadingUsers ? (
+                <div className="flex justify-center py-12">
+                  <span className="loading loading-spinner loading-lg" />
+                </div>
+              ) : recommendedUsers.length === 0 ? (
+                <div className="card bg-base-200 p-6 text-center">
+                  <h3 className="font-semibold text-lg mb-2">No recommendations available</h3>
+                  <p className="text-base-content opacity-70">
+                    {debouncedSearch
+                      ? "No learners match your search criteria. Try a different query!"
+                      : "Check back later for new language partners!"}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {recommendedUsers.map((user) => {
+                      const hasRequestBeenSent = outgoingRequestsIds.has(user._id);
 
-                  return (
-                    <div
-                      key={user._id}
-                      className="card bg-base-200 hover:shadow-lg transition-all duration-300"
-                    >
-                      <div className="card-body p-5 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="avatar size-16 rounded-full">
-                            <img
-                              src={user.profilePic}
-                              alt={user.fullName}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email || user.fullName)}`;
-                              }}
-                            />
-                          </div>
-
-                          <div>
-                            <h3 className="font-semibold text-lg">{user.fullName}</h3>
-                            {user.location && (
-                              <div className="flex items-center text-xs opacity-70 mt-1">
-                                <MapPinIcon className="size-3 mr-1" />
-                                {user.location}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Languages with flags */}
-                        <div className="flex flex-wrap gap-1.5">
-                          <span className="badge badge-secondary">
-                            {getLanguageFlag(user.nativeLanguage)}
-                            Native: {capitialize(user.nativeLanguage)}
-                          </span>
-                          <span className="badge badge-outline">
-                            {getLanguageFlag(user.learningLanguage)}
-                            Learning: {capitialize(user.learningLanguage)}
-                          </span>
-                        </div>
-
-                        {user.bio && <p className="text-sm opacity-70 line-clamp-2">{user.bio}</p>}
-
-                        {/* Action button */}
-                        <button
-                          className={`btn w-full mt-2 ${
-                            hasRequestBeenSent ? "btn-disabled" : "btn-primary"
-                          } `}
-                          onClick={() => sendRequestMutation(user._id)}
-                          disabled={hasRequestBeenSent || isPending}
+                      return (
+                        <div
+                          key={user._id}
+                          className="card bg-base-200 hover:shadow-lg transition-all duration-300"
                         >
-                          {hasRequestBeenSent ? (
-                            <>
-                              <CheckCircleIcon className="size-4 mr-2" />
-                              Request Sent
-                            </>
-                          ) : (
-                            <>
-                              <UserPlusIcon className="size-4 mr-2" />
-                              Send Friend Request
-                            </>
-                          )}
+                          <div className="card-body p-5 space-y-4">
+                            <div className="flex items-center gap-3">
+                              <div className="avatar size-16 rounded-full">
+                                <img
+                                  src={user.profilePic}
+                                  alt={user.fullName}
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(user.email || user.fullName)}`;
+                                  }}
+                                />
+                              </div>
+
+                              <div>
+                                <h3 className="font-semibold text-lg">{user.fullName}</h3>
+                                {user.location && (
+                                  <div className="flex items-center text-xs opacity-70 mt-1">
+                                    <MapPinIcon className="size-3 mr-1" />
+                                    {user.location}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Languages with flags */}
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className="badge badge-secondary">
+                                {getLanguageFlag(user.nativeLanguage)}
+                                Native: {capitialize(user.nativeLanguage)}
+                              </span>
+                              <span className="badge badge-outline">
+                                {getLanguageFlag(user.learningLanguage)}
+                                Learning: {capitialize(user.learningLanguage)}
+                              </span>
+                            </div>
+
+                            {user.bio && (
+                              <p className="text-sm opacity-70 line-clamp-2">{user.bio}</p>
+                            )}
+
+                            {/* Action button */}
+                            <button
+                              className={`btn w-full mt-2 ${
+                                hasRequestBeenSent ? "btn-disabled" : "btn-primary"
+                              } `}
+                              onClick={() => sendRequestMutation(user._id)}
+                              disabled={hasRequestBeenSent || isPending}
+                            >
+                              {hasRequestBeenSent ? (
+                                <>
+                                  <CheckCircleIcon className="size-4 mr-2" />
+                                  Request Sent
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlusIcon className="size-4 mr-2" />
+                                  Send Friend Request
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination Controls for scale (100k+ users) */}
+                  {pagination && pagination.totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-4 border-t border-base-300">
+                      <p className="text-sm opacity-70">
+                        Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                        {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
+                        {pagination.total} learners
+                      </p>
+                      <div className="join">
+                        <button
+                          className="join-item btn btn-sm"
+                          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                          disabled={pagination.page <= 1 || loadingUsers}
+                        >
+                          <ChevronLeftIcon className="size-4 mr-1" />
+                          Previous
+                        </button>
+                        <button className="join-item btn btn-sm btn-ghost pointer-events-none">
+                          Page {pagination.page} of {pagination.totalPages}
+                        </button>
+                        <button
+                          className="join-item btn btn-sm"
+                          onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+                          disabled={!pagination.hasMore || loadingUsers}
+                        >
+                          Next
+                          <ChevronRightIcon className="size-4 ml-1" />
                         </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Pagination Controls for scale (100k+ users) */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-4 border-t border-base-300">
-                  <p className="text-sm opacity-70">
-                    Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                    {pagination.total} learners
-                  </p>
-                  <div className="join">
-                    <button
-                      className="join-item btn btn-sm"
-                      onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                      disabled={pagination.page <= 1 || loadingUsers}
-                    >
-                      <ChevronLeftIcon className="size-4 mr-1" />
-                      Previous
-                    </button>
-                    <button className="join-item btn btn-sm btn-ghost pointer-events-none">
-                      Page {pagination.page} of {pagination.totalPages}
-                    </button>
-                    <button
-                      className="join-item btn btn-sm"
-                      onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
-                      disabled={!pagination.hasMore || loadingUsers}
-                    >
-                      Next
-                      <ChevronRightIcon className="size-4 ml-1" />
-                    </button>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </section>
+            </section>
+          </div>
+
+          {/* SIDE DASHBOARD: IMMERSION & CULTURAL SPARK */}
+          <div className="lg:col-span-4 xl:col-span-4 space-y-6 lg:sticky lg:top-6">
+            <DailyImmersionCard />
+
+            {/* Quick Practice Tip Card */}
+            <div className="card bg-base-200 border border-base-300 p-4 space-y-2.5">
+              <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+                <LightbulbIcon className="size-4" />
+                <span>Conversation Tip</span>
+              </div>
+              <p className="text-xs opacity-80 leading-relaxed">
+                Connect with a native speaker and try using today's <strong>cultural idiom</strong> in your conversation. Contextual storytelling is the fastest way to achieve conversational fluency!
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

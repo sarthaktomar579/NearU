@@ -63,3 +63,17 @@ export async function getStreamToken() {
   const response = await axiosInstance.get("/chat/token");
   return response.data;
 }
+
+export async function getDailyImmersion(language) {
+  const response = await axiosInstance.get("/immersion/daily", {
+    params: language ? { language } : {},
+  });
+  return response.data;
+}
+
+export async function getRandomImmersion(language) {
+  const response = await axiosInstance.get("/immersion/random", {
+    params: language ? { language } : {},
+  });
+  return response.data;
+}

@@ -18,6 +18,8 @@ import toast from "react-hot-toast";
 
 import ChatLoader from "../components/ChatLoader";
 import CallButton from "../components/CallButton";
+import DailyImmersionCard from "../components/DailyImmersionCard";
+import { SparklesIcon, XIcon } from "lucide-react";
 
 const STREAM_API_KEY = import.meta.env.VITE_STREAM_API_KEY;
 
@@ -28,6 +30,7 @@ const ChatPage = () => {
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showIcebreaker, setShowIcebreaker] = useState(false);
 
   const { authUser } = useAuthUser();
 
@@ -73,12 +76,7 @@ const ChatPage = () => {
           tokenData.token
         );
 
-        //
         const channelId = [authUser._id, targetUserId].sort().join("-");
-
-        // you and me
-        // if i start the chat => channelId: [myId, yourId]
-        // if you start the chat => channelId: [yourId, myId]  => [myId,yourId]
 
         const currChannel = client.channel("messaging", channelId, {
           members: [authUser._id, targetUserId],
@@ -113,6 +111,16 @@ const ChatPage = () => {
     }
   };
 
+  const handleInsertIcebreaker = (promptText) => {
+    if (channel) {
+      channel.sendMessage({
+        text: `💡 Conversation Starter: ${promptText}`,
+      });
+      setShowIcebreaker(false);
+      toast.success("Icebreaker sent to chat! 🚀");
+    }
+  };
+
   if (loading) return <ChatLoader />;
 
   if (error) {
@@ -132,21 +140,48 @@ const ChatPage = () => {
   if (!chatClient || !channel) return <ChatLoader />;
 
   return (
-    <div className="h-[93vh]">
-      <Chat client={chatClient}>
-        <Channel channel={channel}>
-          <div className="w-full relative">
-            <CallButton handleVideoCall={handleVideoCall} />
-            <Window>
-              <ChannelHeader />
-              <MessageList />
-              <MessageInput focus />
-            </Window>
+    <div className="h-[93vh] relative flex overflow-hidden">
+      <div className="flex-1 h-full w-full">
+        <Chat client={chatClient}>
+          <Channel channel={channel}>
+            <div className="w-full relative h-full flex flex-col">
+              <CallButton
+                handleVideoCall={handleVideoCall}
+                onToggleIcebreaker={() => setShowIcebreaker((prev) => !prev)}
+                isIcebreakerOpen={showIcebreaker}
+              />
+              <Window>
+                <ChannelHeader />
+                <MessageList />
+                <MessageInput focus />
+              </Window>
+            </div>
+            <Thread />
+          </Channel>
+        </Chat>
+      </div>
+
+      {/* Slide-over Immersion Drawer */}
+      {showIcebreaker && (
+        <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[420px] bg-base-100 z-50 shadow-2xl border-l border-base-300 p-4 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-base-300">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <SparklesIcon className="size-4 text-warning" />
+              Conversation Spark & Icebreakers
+            </h3>
+            <button
+              onClick={() => setShowIcebreaker(false)}
+              className="btn btn-ghost btn-circle btn-sm"
+              title="Close drawer"
+            >
+              <XIcon className="size-4" />
+            </button>
           </div>
-          <Thread />
-        </Channel>
-      </Chat>
+          <DailyImmersionCard onInsertPrompt={handleInsertIcebreaker} />
+        </div>
+      )}
     </div>
   );
 };
+
 export default ChatPage;
