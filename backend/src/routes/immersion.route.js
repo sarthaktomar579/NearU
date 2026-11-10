@@ -14,3 +14,4 @@ router.get("/daily", getDailyImmersion);
 router.get("/random", getRandomImmersion);
 
 export default router;
+

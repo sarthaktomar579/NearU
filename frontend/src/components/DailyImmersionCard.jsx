@@ -282,3 +282,4 @@ const DailyImmersionCard = ({ initialLanguage, onInsertPrompt }) => {
 };
 
 export default DailyImmersionCard;
+

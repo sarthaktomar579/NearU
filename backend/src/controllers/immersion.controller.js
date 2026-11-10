@@ -161,3 +161,4 @@ export async function getRandomImmersion(req, res) {
     res.status(500).json({ message: "Internal server error" });
   }
 }
+
